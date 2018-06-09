@@ -1,6 +1,6 @@
 require("help_functions")
 
-TrainIgnoreList = { "electric-locomotive", "electric-locomotive-mk2" , "electric-locomotive-mk3" }
+TrainIgnoreList = { "electric-locomotive", "electric-locomotive-mk2" , "electric-locomotive-mk3" , "fusion-locomotive" }
 
 local FUEL_TRAIN_STOP_NAME = "Fuel Stop"
 
@@ -9,7 +9,13 @@ function ONLOAD()
 	global.FuelTrainStop = global.FuelTrainStop or {}
 	global.FinishTrain = global.FinishTrain or {}
 	for _,force in pairs(game.forces) do
-		force.reset_technology_effects()
+		for _,tech in pairs(force.technologies) do
+			if tech.name == "automated-rail-transportation" and tech.researched then
+				tech.researched = false
+				tech.researched = true
+				break
+			end
+		end
 	end
 end
 
@@ -127,7 +133,6 @@ end
 
 local function ONRENAMED(event)
 	if not event.by_script and event.entity.name == "fuel-train-stop" then
-	game.print("rename")
 		FUEL_TRAIN_STOP_NAME = event.entity.backer_name
 		for _,t_stop in pairs(global.FuelTrainStop) do
 			t_stop.backer_name = FUEL_TRAIN_STOP_NAME			
@@ -136,7 +141,11 @@ local function ONRENAMED(event)
 end
 
 
-script.on_configuration_changed(function() ONLOAD() end)
+script.on_configuration_changed(function(data)
+	if data and data.mod_changes['FuelTrainStop'] then
+		ONLOAD()		
+	end
+end)
 script.on_init(function() ONLOAD() end)
 
 script.on_event(defines.events.on_tick,ONTICK)
