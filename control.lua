@@ -9,6 +9,8 @@ TrainIgnoreList={
 "electric-vehicles-electric-locomotive"
 }
 
+local MODNAME="FuelTrainStop"
+
 function Contains(tab,element)
 	for _,v in pairs(tab) do
 		if v == element then return true end
@@ -77,37 +79,42 @@ function ONCONFIG(data)
 	init()
 	getEnergyList()
 	if migration(data) then
-		global.FuelTrainStop.TrainStop = {}
-		local TrainStop = game.surfaces[1].find_entities_filtered{name="fuel-train-stop"}
-		if TrainStop then
-			global.FuelTrainStop.BackerName = TrainStop[1].backer_name
-			for _,entity in pairs(TrainStop) do
-				table.insert(global.FuelTrainStop.TrainStop, entity)
-			end
-		end
-		getTrainList()
-		for _,train in pairs(global.FuelTrainStop.TrainList) do
-			local schedule = train.schedule
-			if schedule.records[#schedule.records].station == global.FuelTrainStop.BackerName then
-				table.remove(schedule.records,#schedule.records)
-				if schedule.current > #schedule.records then
-					schedule.current = 1
+		local old_version = versionformat(data.mod_changes[MODNAME].old_version)
+		if old_version < "00.15.03" then
+			global.FuelTrainStop.TrainStop = {}
+			local TrainStop = game.surfaces[1].find_entities_filtered{name="fuel-train-stop"}
+			if #TrainStop ~= 0 then
+				global.FuelTrainStop.BackerName = TrainStop[1].backer_name
+				for _,entity in pairs(TrainStop) do
+					table.insert(global.FuelTrainStop.TrainStop, entity)
 				end
-				train.schedule = schedule
+			end
+			getTrainList()
+			for _,train in pairs(global.FuelTrainStop.TrainList) do
+				local schedule = train.schedule
+				if schedule.records[#schedule.records].station == global.FuelTrainStop.BackerName then
+					table.remove(schedule.records,#schedule.records)
+					if schedule.current > #schedule.records then
+						schedule.current = 1
+					end
+					train.schedule = schedule
+				end
 			end
 		end
 	end
 end	
 
 function migration(data)
-	if data and data.mod_changes["FuelTrainStop"] then
-		if data.mod_changes["FuelTrainStop"].old_version then
-			if data.mod_changes["FuelTrainStop"].old_version < "0.15.3" then
-				return true
-			end
+	if data and data.mod_changes and data.mod_changes[MODNAME] then
+		if data.mod_changes[MODNAME].old_version then
+			return true
 		end
 	end
 	return false
+end
+
+function versionformat(version)
+	return string.format("%02d.%02d.%02d", string.match(version, "(%d+).(%d+).(%d+)"))
 end
 
 function ONTICK(event)
@@ -117,7 +124,7 @@ end
 function fuelStopTick(event)
 	if event.tick % 300 == 15 and #global.FuelTrainStop.TrainStop ~= 0 then
 		for index,train in pairs(global.FuelTrainStop.TrainList) do
-			if train and train.valid then
+			if train then
 				if train.manual_mode == false then
 					local locs = train.locomotives
 					for _,loc in pairs(locs.back_movers) do
