@@ -72,8 +72,17 @@ end
 function getTrainList()
 	global.FuelTrainStop.TrainList = {}
 	local alltrain = game.surfaces[1].get_trains()
-	for _,train in pairs(alltrain) do
+	for _,train in pairs(alltrain) do	
+		local locs = train.locomotives
+		for _,loc in pairs(locs.front_movers) do
+			if Contains(TrainIgnoreList,loc.name) then goto continue end
+		end
+		for _,loc in pairs(locs.back_movers) do
+			if Contains(TrainIgnoreList,loc.name) then goto continue end
+		end
+		if Contains(global.FuelTrainStop.TrainList,train) then goto continue end
 		table.insert(global.FuelTrainStop.TrainList,train)
+		::continue::
 	end
 end
 
@@ -84,6 +93,7 @@ function ONCONFIG(data)
 		local old_version = versionformat(data.mod_changes[MODNAME].old_version)
 		if old_version < "00.15.03" then migration_0_15_3() end
 		if old_version < "00.15.05" then migration_0_15_5() end
+		if old_version == "00.15.06" then migration_0_15_7() end
 	end
 end	
 
@@ -121,31 +131,63 @@ function migration_0_15_5()
 	end
 end
 
+function migration_0_15_7()
+	local backer_name = global.FuelTrainStop.BackerName or "Fuel Stop"
+	global.FuelTrainStop = {}
+	global.FuelTrainStop.TrainStop = {}
+	global.FuelTrainStop.FinishTrain = {}
+	global.FuelTrainStop.EnergyList = {}
+	global.FuelTrainStop.TrainList = {}
+	global.FuelTrainStop.BackerName = backer_name
+	local train_stop = game.surfaces[1].find_entities_filtered{name="fuel-train-stop"}
+	global.FuelTrainStop.TrainStop = train_stop
+	getEnergyList()
+	getTrainList()
+	local alltrains = game.surfaces[1].get_trains()	
+	for _,train in pairs(alltrains) do
+		local schedule = train.schedule
+		if schedule then
+			for i,record in pairs(schedule.records) do
+				if record.station == global.FuelTrainStop.BackerName then
+					table.remove(schedule.records,i)
+					if i > #schedule.records then
+						schedule.current = 1
+					else
+						schedule.current = i
+					end					
+					break
+				end
+			end
+			train.schedule = schedule
+		end
+	end
+end
+
 function ONTICK(event)
 	addFuelSchedule(event)
 	removeFuelSchedule(event)
 end
 
 function addFuelSchedule(event)
-	if not (event.tick % 1200 == 15 and #global.FuelTrainStop.TrainStop ~= 0) then return end
+	if not (event.tick % 1200 == 15 and #global.FuelTrainStop.TrainStop > 0) then return end
 	for index,train in pairs(global.FuelTrainStop.TrainList) do
-		if train.valid then
-			if train.manual_mode then goto continue end
-			local locs = train.locomotives
-			for _,loc in pairs(locs.front_movers) do
-				if lowFuel(loc) then
-					addSchedule(train)
-					goto continue
-				end
-			end
-			for _,loc in pairs(locs.back_movers) do
-				if lowFuel(loc) then
-					addSchedule(train)
-					goto continue
-				end
-			end
-		else
+		if not train.valid then
 			table.remove(global.FuelTrainStop.TrainList,index)
+			goto continue
+		end
+		if train.manual_mode then goto continue end
+		local locs = train.locomotives
+		for _,loc in pairs(locs.front_movers) do
+			if lowFuel(loc) then
+				addSchedule(train)
+				goto continue
+			end
+		end
+		for _,loc in pairs(locs.back_movers) do
+			if lowFuel(loc) then
+				addSchedule(train)
+				goto continue
+			end
 		end
 		::continue::
 	end
@@ -154,7 +196,7 @@ end
 function lowFuel(loc)
 	local loc_inv = loc.get_fuel_inventory()
 	local contents = loc_inv.get_contents()
-	if getEnergy(contents) < (loc.prototype.max_energy_usage * 10000) then	-- 10000 ticks ~ 3 min
+	if getEnergy(contents) < (loc.prototype.max_energy_usage * 20000) then
 		return true
 	else
 		return false
@@ -191,9 +233,9 @@ function addSchedule(train)
 end
 
 function removeFuelSchedule(event)
-	if not (event.tick % 300 == 15 and #global.FuelTrainStop.FinishTrain ~= 0) then return end
+	if not (event.tick % 300 == 15 and #global.FuelTrainStop.FinishTrain > 0) then return end
 	for index,train in pairs(global.FuelTrainStop.FinishTrain) do
-		if not train.station then 
+		if not (train.station and train.station.backer_name == global.FuelTrainStop.BackerName) then 
 			local schedule = train.schedule
 			for i,record in pairs(schedule.records) do
 				if record.station == global.FuelTrainStop.BackerName then
@@ -263,8 +305,8 @@ function ONARRIVE(event)
 	end
 end
 
-script.on_configuration_changed(function(data) ONCONFIG(data) end)
-script.on_init(function() ONLOAD() end)
+script.on_configuration_changed(ONCONFIG)
+script.on_init(ONLOAD)
 script.on_event(defines.events.on_tick,ONTICK)
 script.on_event({defines.events.on_built_entity,defines.events.on_robot_built_entity},ONBUILT)
 script.on_event({defines.events.on_preplayer_mined_item,defines.events.on_robot_pre_mined,defines.events.on_entity_died},ONREMOVE)
