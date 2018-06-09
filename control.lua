@@ -195,8 +195,11 @@ end
 
 function lowFuel(loc)
 	local loc_inv = loc.get_fuel_inventory()
+	if not loc_inv then return false end
 	local contents = loc_inv.get_contents()
-	if getEnergy(contents) < (loc.prototype.max_energy_usage * 20000) then
+	local min_fuel = settings.global['min-fuel-amount'].value * loc.prototype.max_energy_usage * 800
+	min_fuel = min_fuel / loc.prototype.burner_prototype.effectivity	
+	if getEnergy(contents) < min_fuel then
 		return true
 	else
 		return false
