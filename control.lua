@@ -1,9 +1,20 @@
-require("help_functions")
-
-TrainIgnoreList = { "electric-locomotive", "electric-locomotive-mk2" , "electric-locomotive-mk3" , "fusion-locomotive" }
-
 local FUEL_TRAIN_STOP_NAME = "Fuel Stop"
 
+TrainIgnoreList={
+"electric-locomotive",
+"electric-locomotive-mk2",
+"electric-locomotive-mk3",
+"fusion-locomotive",
+"fusion-locomotive-mk2",
+"fusion-locomotive-mk3"
+}
+
+function Contains(tab,element)
+	for _,v in pairs(tab) do
+		if v == element then return true end
+	end
+	return false
+end
 
 function ONLOAD()
 	global.FuelTrainStop = global.FuelTrainStop or {}
@@ -19,8 +30,7 @@ function ONLOAD()
 	end
 end
 
-
-local function getEnergy(list)
+function getEnergy(list)
 	local e = 0
 	for name,amount in pairs(list) do
 		for _,item in pairs(game.item_prototypes) do
@@ -33,20 +43,17 @@ local function getEnergy(list)
 	return e
 end
 
-
-local function  addFuelSchedule(train)
+function  addFuelSchedule(train)
 	local schedule = train.schedule
-	if schedule.records[#schedule.records].station ~= FUEL_TRAIN_STOP_NAME then
-		local record = {station = FUEL_TRAIN_STOP_NAME, wait_conditions = {}}
-		record.wait_conditions[#record.wait_conditions+1] = {type = "inactivity", compare_type = "and", ticks = 120 }
-		schedule.records[#schedule.records+1] = record
-		train.schedule = schedule
-		table.insert(global.FinishTrain,train)
-	end
+	if schedule.records[#schedule.records].station == FUEL_TRAIN_STOP_NAME then return end
+	local record = {station = FUEL_TRAIN_STOP_NAME, wait_conditions = {}}
+	record.wait_conditions[#record.wait_conditions+1] = {type = "inactivity", compare_type = "and", ticks = 120 }
+	schedule.records[#schedule.records+1] = record
+	train.schedule = schedule
+	table.insert(global.FinishTrain,train)
 end
 
-
-local function removeFuelSchedule(train)
+function removeFuelSchedule(train)
 	for index,ftrain in pairs(global.FinishTrain) do
 		if ftrain == train then
 			if train.station == nil or train.station.name ~= "fuel-train-stop" then
@@ -62,55 +69,46 @@ local function removeFuelSchedule(train)
 	end					
 end
 
-
-local function getTrains()
+function getTrains()
 	local alltrain = game.surfaces[1].get_trains()
 	local trainlist = {}
 	for _,train in pairs(alltrain) do
 		if train.manual_mode == false then
 			local locs = train.locomotives
-			local f_locs = locs.front_movers
-			local b_locs = locs.back_movers
-			local f_e_loc = false
-			local b_e_loc = false
-			for _,loc in pairs(f_locs) do
-				if exists(TrainIgnoreList,loc.name) then f_e_loc = true end
+			for _,loc in pairs(locs.front_movers) do
+				if Contains(TrainIgnoreList,loc.name) then goto continue end
 			end
-			for _,loc in pairs(b_locs) do
-				if exists(TrainIgnoreList,loc.name) then b_e_loc = true end
+			for _,loc in pairs(locs.back_movers) do
+				if Contains(TrainIgnoreList,loc.name) then goto continue end
 			end
-			if not f_e_loc and not b_e_loc then 
-				table.insert(trainlist,train)
-			end
+			table.insert(trainlist,train)
 		end
+		::continue::
 	end
 	return trainlist
 end
 
-
-local function ONTICK(event)
-	if event.tick % 300 == 15 and #global.FuelTrainStop ~= 0 then
-		local trainlist = getTrains()
-		for _,train in pairs(trainlist) do
-			local locs = train.locomotives
-			local f_locs = locs.front_movers
-			for _,loc in pairs(f_locs) do
-				local train_fuel = loc.get_fuel_inventory()
-				local contents = train_fuel.get_contents()
-				if getEnergy(contents) < (loc.prototype.max_energy_usage * 10000) then	-- 10000 ticks ~ 3 min
-					addFuelSchedule(train)
-				else
-					if global.FinishTrain ~= nil then
-						removeFuelSchedule(train)
-					end
-				end
+function ONTICK(event)
+	if event.tick % 300 ~= 15 and #global.FuelTrainStop == 0 then return end
+	local trainlist = getTrains()
+	for _,train in pairs(trainlist) do
+		local locs = train.locomotives
+		local f_locs = locs.front_movers
+		for _,loc in pairs(f_locs) do
+			local train_fuel = loc.get_fuel_inventory()
+			local contents = train_fuel.get_contents()
+			if getEnergy(contents) < (loc.prototype.max_energy_usage * 10000) then	-- 10000 ticks ~ 3 min
+				addFuelSchedule(train)
+				goto continue
 			end
 		end
+		removeFuelSchedule(train)
+		::continue::
 	end
 end
 
 
-local function ONBUILT(event)
+function ONBUILT(event)
 	local entity = event.created_entity
 	if entity.name == "fuel-train-stop" then
 		table.insert(global.FuelTrainStop, entity)
@@ -119,7 +117,7 @@ local function ONBUILT(event)
 end
 
 
-local function ONREMOVE(event)
+function ONREMOVE(event)
 	local entity = event.entity
 	if entity.name == "fuel-train-stop" then
 		for index,t_stop in pairs(global.FuelTrainStop) do
@@ -131,7 +129,7 @@ local function ONREMOVE(event)
 end
 
 
-local function ONRENAMED(event)
+function ONRENAMED(event)
 	if not event.by_script and event.entity.name == "fuel-train-stop" then
 		FUEL_TRAIN_STOP_NAME = event.entity.backer_name
 		for _,t_stop in pairs(global.FuelTrainStop) do
