@@ -62,20 +62,9 @@ end
 
 function getEnergyList()
 	global.FuelTrainStop.EnergyList = {}
-	local locs = game.surfaces[1].find_entities_filtered{type="locomotive"}
-	local fuel_category = {}
-	for _,loc in pairs(locs) do
-		if loc.burner then
-			if not Contains(fuel_category,loc.burner.fuel_category) then
-				table.insert(fuel_category,loc.burner.fuel_category)
-			end
-		end
-	end
 	for _,item in pairs(game.item_prototypes) do
 		if item.fuel_category then
-			if Contains(fuel_category,item.fuel_category) then
-				table.insert(global.FuelTrainStop.EnergyList,{name=item.name,fuel_value=item.fuel_value})
-			end
+			table.insert(global.FuelTrainStop.EnergyList,{name=item.name,fuel_value=item.fuel_value})
 		end
 	end
 end
