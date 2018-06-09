@@ -18,6 +18,19 @@ function Contains(tab,element)
 	return false
 end
 
+function migration(data)
+	if data and data.mod_changes and data.mod_changes[MODNAME] then
+		if data.mod_changes[MODNAME].old_version then
+			return true
+		end
+	end
+	return false
+end
+
+function versionformat(version)
+	return string.format("%02d.%02d.%02d", string.match(version, "(%d+).(%d+).(%d+)"))
+end
+
 function ONLOAD()
 	init()
 	getEnergyList()
@@ -80,76 +93,85 @@ function ONCONFIG(data)
 	getEnergyList()
 	if migration(data) then
 		local old_version = versionformat(data.mod_changes[MODNAME].old_version)
-		if old_version < "00.15.03" then
-			global.FuelTrainStop.TrainStop = {}
-			local TrainStop = game.surfaces[1].find_entities_filtered{name="fuel-train-stop"}
-			if #TrainStop ~= 0 then
-				global.FuelTrainStop.BackerName = TrainStop[1].backer_name
-				for _,entity in pairs(TrainStop) do
-					table.insert(global.FuelTrainStop.TrainStop, entity)
-				end
-			end
-			getTrainList()
-			for _,train in pairs(global.FuelTrainStop.TrainList) do
-				local schedule = train.schedule
-				if schedule.records[#schedule.records].station == global.FuelTrainStop.BackerName then
-					table.remove(schedule.records,#schedule.records)
-					if schedule.current > #schedule.records then
-						schedule.current = 1
-					end
-					train.schedule = schedule
-				end
-			end
-		end
+		if old_version < "00.15.03" then migration_0_15_3() end
+		if old_version < "00.15.05" then migration_0_15_5() end
 	end
 end	
 
-function migration(data)
-	if data and data.mod_changes and data.mod_changes[MODNAME] then
-		if data.mod_changes[MODNAME].old_version then
-			return true
+function migration_0_15_3()
+	global.FuelTrainStop.TrainStop = {}
+	local TrainStop = game.surfaces[1].find_entities_filtered{name="fuel-train-stop"}
+	if #TrainStop ~= 0 then
+		global.FuelTrainStop.BackerName = TrainStop[1].backer_name
+		for _,entity in pairs(TrainStop) do
+			table.insert(global.FuelTrainStop.TrainStop, entity)
 		end
 	end
-	return false
+	getTrainList()
+	for _,train in pairs(global.FuelTrainStop.TrainList) do
+		local schedule = train.schedule
+		if schedule.records[#schedule.records].station == global.FuelTrainStop.BackerName then
+			table.remove(schedule.records,#schedule.records)
+			if schedule.current > #schedule.records then
+				schedule.current = 1
+			end
+			train.schedule = schedule
+		end
+	end
 end
 
-function versionformat(version)
-	return string.format("%02d.%02d.%02d", string.match(version, "(%d+).(%d+).(%d+)"))
+function migration_0_15_5()
+	global.FuelTrainStop.FinishTrain = {}
+	local alltrain = game.surfaces[1].get_trains()
+	if #alltrain ~= 0 then
+		for _,train in pairs(alltrain) do
+			if train.station and train.station.backer_name == global.FuelTrainStop.BackerName then    
+				table.insert(global.FuelTrainStop.FinishTrain, train)
+			end
+		end
+	end
 end
 
 function ONTICK(event)
-fuelStopTick(event)
+	addFuelSchedule(event)
+	removeFuelSchedule(event)
 end
 
-function fuelStopTick(event)
-	if event.tick % 300 == 15 and #global.FuelTrainStop.TrainStop ~= 0 then
-		for index,train in pairs(global.FuelTrainStop.TrainList) do
-			if train then
-				if train.manual_mode == false then
-					local locs = train.locomotives
-					for _,loc in pairs(locs.back_movers) do
-						if Contains(TrainIgnoreList,loc.name) then goto continue end
-					end
-					for _,loc in pairs(locs.front_movers) do
-						if Contains(TrainIgnoreList,loc.name) then goto continue end
-					end
-					for _,loc in pairs(locs.front_movers) do
-						local loc_inv = loc.get_fuel_inventory()
-						local contents = loc_inv.get_contents()
-						if getEnergy(contents) < (loc.prototype.max_energy_usage * 10000) then	-- 10000 ticks ~ 3 min
-							addFuelSchedule(train)
-							goto continue
-						end
-					end
-					removeFuelSchedule(train)
+function addFuelSchedule(event)
+	if not (event.tick % 1200 == 15 and #global.FuelTrainStop.TrainStop ~= 0) then return end
+	for index,train in pairs(global.FuelTrainStop.TrainList) do
+		if train.valid then
+			if train.manual_mode then goto continue end
+			local locs = train.locomotives
+			for _,loc in pairs(locs.front_movers) do
+				if lowFuel(loc) then
+					addSchedule(train)
+					goto continue
 				end
-			else
-				table.remove(global.FuelTrainStop.TrainList,index)
 			end
-			::continue::
+			for _,loc in pairs(locs.back_movers) do
+				if lowFuel(loc) then
+					addSchedule(train)
+					goto continue
+				end
+			end
+		else
+			table.remove(global.FuelTrainStop.TrainList,index)
 		end
+		::continue::
 	end
 end
+
+function lowFuel(loc)
+	local loc_inv = loc.get_fuel_inventory()
+	local contents = loc_inv.get_contents()
+	if getEnergy(contents) < (loc.prototype.max_energy_usage * 10000) then	-- 10000 ticks ~ 3 min
+		return true
+	else
+		return false
+	end
+end
+
 
 function getEnergy(list)
 	local e = 0
@@ -164,32 +186,42 @@ function getEnergy(list)
 	return e
 end
 
-function  addFuelSchedule(train)
-	local schedule = train.schedule
-	if schedule.records[#schedule.records].station == global.FuelTrainStop.BackerName then return end
+function addSchedule(train)
+	local schedule = train.schedule or {}
+	if not train.schedule then
+		schedule.records = {}
+	end
+	for _,record in pairs(schedule.records) do
+		if record.station == global.FuelTrainStop.BackerName then return end
+	end
 	local record = {station = global.FuelTrainStop.BackerName, wait_conditions = {}}
 	record.wait_conditions[#record.wait_conditions+1] = {type = "inactivity", compare_type = "and", ticks = 120 }
-	schedule.records[#schedule.records+1] = record
+	local current = schedule.current or 0
+	table.insert(schedule.records,current+1,record)
 	train.schedule = schedule
-	table.insert(global.FuelTrainStop.FinishTrain,train)
 end
 
-function removeFuelSchedule(train)
-	for index,ftrain in pairs(global.FuelTrainStop.FinishTrain) do
-		if ftrain == train then
-			if not train.station or train.station.name ~= "fuel-train-stop" then
-				local schedule = train.schedule
-				table.remove(schedule.records,#schedule.records)
-				if schedule.current > #schedule.records then
-					schedule.current = 1
+function removeFuelSchedule(event)
+	if not (event.tick % 300 == 15 and #global.FuelTrainStop.FinishTrain ~= 0) then return end
+	for index,train in pairs(global.FuelTrainStop.FinishTrain) do
+		if not train.station then 
+			local schedule = train.schedule
+			for i,record in pairs(schedule.records) do
+				if record.station == global.FuelTrainStop.BackerName then
+					table.remove(schedule.records,i)
+					if i > #schedule.records then
+						schedule.current = 1
+					else
+						schedule.current = i
+					end					
+					break
 				end
-				train.schedule = schedule
-				table.remove(global.FuelTrainStop.FinishTrain,index)
-				break
 			end
+			train.schedule = schedule
+			table.remove(global.FuelTrainStop.FinishTrain,index)
 		end
-	end					
-end
+	end
+end	
 
 function ONBUILT(event)
 	local entity = event.created_entity
@@ -221,8 +253,24 @@ end
 
 function ONNEWTRAIN(event)
 	local train = event.train
-	if not Contains(global.FuelTrainStop.TrainList,train) then
-		table.insert(global.FuelTrainStop.TrainList,train)
+	local locs = train.locomotives
+	for _,loc in pairs(locs.front_movers) do
+		if Contains(TrainIgnoreList,loc.name) then goto continue end
+	end
+	for _,loc in pairs(locs.back_movers) do
+		if Contains(TrainIgnoreList,loc.name) then goto continue end
+	end
+	if Contains(global.FuelTrainStop.TrainList,train) then goto continue end
+	table.insert(global.FuelTrainStop.TrainList,train)
+	::continue::
+end
+
+function ONARRIVE(event)
+	local train = event.train
+	if train.state == defines.train_state.wait_station then
+		if train.station.backer_name == global.FuelTrainStop.BackerName then
+			table.insert(global.FuelTrainStop.FinishTrain,train)
+		end
 	end
 end
 
@@ -233,3 +281,4 @@ script.on_event({defines.events.on_built_entity,defines.events.on_robot_built_en
 script.on_event({defines.events.on_preplayer_mined_item,defines.events.on_robot_pre_mined,defines.events.on_entity_died},ONREMOVE)
 script.on_event(defines.events.on_entity_renamed,ONRENAMED)
 script.on_event(defines.events.on_train_created,ONNEWTRAIN)
+script.on_event(defines.events.on_train_changed_state,ONARRIVE)
