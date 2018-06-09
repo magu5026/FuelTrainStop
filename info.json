@@ -1,0 +1,9 @@
+{
+	"name":"FuelTrainStop",
+	"author":"magu5026",
+	"version":"0.15.0",
+	"title":"Fuel Train Staiton",
+	"description":"This mod allows trains with low fuel to automatically enter the fuel stop to replenish fuel.",
+	"factorio_version":"0.15",
+	"dependencies": ["base >= 0.15.31"]
+}
