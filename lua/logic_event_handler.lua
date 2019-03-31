@@ -80,7 +80,7 @@ end
 function OnTrainChangedState(event)
 	local train = event.train
 	if train.state == defines.train_state.wait_station then
-		if train.station.backer_name == global.TrainStopName then
+		if train.station and train.station.backer_name == global.TrainStopName then
 			global.FinishTrain[train.id] = train
 		end
 	end
