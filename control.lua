@@ -104,16 +104,18 @@ function AddTrainIgnore(name)
 end
 
 function CheckTrainList()
-	for i,train in pairs(global.TrainList) do
-		if train and train.valid then
-			for _,carriage in pairs(train.carriages) do
-				if Contains(train_ignore_list,carriage.name) then 
-					global.TrainList[i] = nil
-					break;
+	if global.TrainList then
+		for i,train in pairs(global.TrainList) do
+			if train and train.valid then
+				for _,carriage in pairs(train.carriages) do
+					if Contains(train_ignore_list,carriage.name) then 
+						global.TrainList[i] = nil
+						break;
+					end
 				end
+			else
+				global.TrainList[i] = nil
 			end
-		else
-			global.TrainList[i] = nil
 		end
 	end
 end
