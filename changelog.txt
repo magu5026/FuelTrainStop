@@ -1,25 +1,30 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.17.2
+Date: 2019-03-27
+  Modding:
+    - An interface (exclude_from_fuel_schedule) has been added to remove trains from automatic refueling.
+---------------------------------------------------------------------------------------------------
 Version: 0.17.1
-Date: 10. 03. 2019
+Date: 2019-03-10
   Major Features:
     - Release 0.17.
 ---------------------------------------------------------------------------------------------------
 Version: 0.16.4
-Date: 14. 02. 2019
+Date: 2019-02-14
   Bugfixes:
     - Attempt to fix the error. https://mods.factorio.com/mod/FuelTrainStop/discussion/5c65d77f478aa8000bdc044d
 ---------------------------------------------------------------------------------------------------
 Version: 0.16.3
-Date: 25. 12. 2018
+Date: 2018-12-25
   Bugfixes:
     - Attempt to fix the error. https://mods.factorio.com/mod/FuelTrainStop/discussion/5c1fbc78b8fe81000d4ecb15
 ---------------------------------------------------------------------------------------------------
 Version: 0.16.2
-Date: 06. 08. 2018
+Date: 2018-08-06
   Changes:
     - Code rework to make it compatible with LTN.
 ---------------------------------------------------------------------------------------------------
 Version: 0.16.1
-Date: 09. 06. 2018
+Date: 2018-06-09
   Major Features:
     - First release 0.16
