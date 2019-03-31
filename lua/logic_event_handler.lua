@@ -158,18 +158,20 @@ function OnTick300()
 			else
 				if not (train.station and train.station.backer_name == global.TrainStopName) then 
 					local schedule = train.schedule
-					for i,record in pairs(schedule.records) do
-						if record.station == global.TrainStopName then
-							table.remove(schedule.records,i)
-							if i > Count(schedule.records) then
-								schedule.current = 1
-							else
-								schedule.current = i
-							end					
-							break
+					if(schedule) then
+						for i,record in pairs(schedule.records) do
+							if record.station == global.TrainStopName then
+								table.remove(schedule.records,i)
+								if i > Count(schedule.records) then
+									schedule.current = 1
+								else
+									schedule.current = i
+								end					
+								break
+							end
 						end
+						train.schedule = schedule
 					end
-					train.schedule = schedule
 					global.FinishTrain[i] = nil
 				end
 			end
