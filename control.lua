@@ -60,7 +60,7 @@ function ON_CONFIGURATION_CHANGED(data)
 	local mod_name = "FuelTrainStop"
 	if NeedMigration(data,mod_name) then
 		local old_version = GetOldVersion(data,mod_name)
-		if old_version < "00.17.02" then
+		if old_version < "00.17.06" then
 			ON_INIT()
 	
 			for _,surface in pairs(game.surfaces) do
@@ -121,7 +121,7 @@ function CheckTrainList()
 end
 
 function ON_BUILT_ENTITY(event)
-	local entity = event.created_entity
+	local entity = event.created_entity or event.entity
 	if entity and entity.valid then
 		if entity.name == "fuel-train-stop" then
 			table.insert(global.TrainStop,entity)
@@ -137,7 +137,7 @@ function ON_REMOVE_ENTITY(event)
 		if entity.name == "fuel-train-stop" then
 			for i,stop in pairs(global.TrainStop) do
 				if stop == entity then
-					table.remove(global.TrainStop,index)
+					table.remove(global.TrainStop,i)
 					break
 				end
 			end
@@ -149,8 +149,12 @@ script.on_event({defines.events.on_pre_player_mined_item,defines.events.on_robot
 function ON_ENTITY_RENAMED(event)
 	if not event.by_script and event.entity.name == "fuel-train-stop" then
 		global.TrainStopName = event.entity.backer_name
-		for _,stop in pairs(global.TrainStop) do
-			stop.backer_name = global.TrainStopName
+		for i,stop in pairs(global.TrainStop) do
+			if stop and stop.valid then
+				stop.backer_name = global.TrainStopName
+			else
+				table.remove(global.TrainStop,i)
+			end
 		end
 	end
 end
@@ -227,17 +231,21 @@ function LowFuel(locomotive)
 end
 
 function AddSchedule(train)
-	local schedule = train.schedule or {}
-	if not train.schedule then
-		schedule.records = {}
-	end
+	local schedule = train.schedule or {records = {}, current = 1}
+	
 	for _,record in pairs(schedule.records) do
 		if record.station == global.TrainStopName then return end
 	end
-	local record = {station = global.TrainStopName, wait_conditions = {}}
-	record.wait_conditions[#record.wait_conditions+1] = {type = "inactivity", compare_type = "and", ticks = 120 }
-	local current = schedule.current or 0
-	table.insert(schedule.records,current+1,record)
+	
+	local inactivity_ticks = settings.global['train-refueling-inactivity-time'].value * 60
+	local record = {station = global.TrainStopName, wait_conditions = {{type = "inactivity", compare_type = "and", ticks = inactivity_ticks }}}
+
+	if settings.global['fuel-station-insert-order'].value == "go-after" then
+		table.insert(schedule.records,schedule.current + 1,record)
+	else
+		table.insert(schedule.records,schedule.current,record)
+	end
+	
 	train.schedule = schedule
 end
 
@@ -265,6 +273,10 @@ function ON_1200TH_TICK()
 end
 script.on_nth_tick(1200,ON_1200TH_TICK)	
 
+function ChangeSchedule(train,schedule)
+	train.schedule = schedule
+end
+
 function ON_300TH_TICK()
 	if Count(global.FinishTrain) > 0 then
 		for i,train in pairs(global.FinishTrain) do
@@ -272,22 +284,27 @@ function ON_300TH_TICK()
 				global.FinishTrain[i] = nil
 			else
 				if not (train.station and train.station.backer_name == global.TrainStopName) then 
+					local changedSchedule = false
 					local schedule = train.schedule
-					if(schedule) then
-						for i,record in pairs(schedule.records) do
+					if (schedule) then
+						for j,record in pairs(schedule.records) do
 							if record.station == global.TrainStopName then
-								table.remove(schedule.records,i)
-								if i > Count(schedule.records) then
+								table.remove(schedule.records,j)
+								if j > Count(schedule.records) then
 									schedule.current = 1
 								else
-									schedule.current = i
+									schedule.current = j
 								end					
 								break
 							end
 						end
-						train.schedule = schedule
+												
+						changedSchedule = pcall(ChangeSchedule,train,schedule)												
 					end
-					global.FinishTrain[i] = nil
+					
+					if changedSchedule then
+						global.FinishTrain[i] = nil
+					end
 				end
 			end
 		end

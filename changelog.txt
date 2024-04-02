@@ -1,4 +1,46 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 2020-11-27
+  Major Features:
+    - Release 1.1.
+---------------------------------------------------------------------------------------------------
+Version: 1.0.0
+Date: 2020-11-27
+  Major Features:
+    - Release 1.0.
+---------------------------------------------------------------------------------------------------
+Version: 0.18.1
+Date: 2020-01-31
+  Major Features:
+    - Release 0.18.
+---------------------------------------------------------------------------------------------------
+Version: 0.17.8
+Date: 2019-12-18
+  Bugfixes:
+    - Fixed an error. https://mods.factorio.com/mod/FuelTrainStop/discussion/5df141793aed27000bdb9806
+---------------------------------------------------------------------------------------------------
+Version: 0.17.7
+Date: 2019-08-12
+  Bugfixes:
+    - Fixed an error with temporary stop. https://mods.factorio.com/mod/FuelTrainStop/discussion/5d4b8059800cec000b65b4c4
+  Changes:
+    - New setting added.
+---------------------------------------------------------------------------------------------------
+Version: 0.17.6
+Date: 2019-08-05
+  Bugfixes:
+    - Fixed a typo.
+---------------------------------------------------------------------------------------------------
+Version: 0.17.5
+Date: 2019-08-04
+  Bugfixes:
+    - Fixed an error with ltn. https://mods.factorio.com/mod/FuelTrainStop/discussion/5d443a22de13a8000b8d6c53
+---------------------------------------------------------------------------------------------------
+Version: 0.17.4
+Date: 2019-07-27
+  Bugfixes:
+    - Fixed an error when pasting settings into a fuel stop. https://mods.factorio.com/mod/FuelTrainStop/discussion/5d3b912a11e5ec000c008a40
+---------------------------------------------------------------------------------------------------
 Version: 0.17.3
 Date: 2019-03-30
   Bugfixes:
