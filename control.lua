@@ -272,6 +272,10 @@ function ON_1200TH_TICK()
 end
 script.on_nth_tick(1200,ON_1200TH_TICK)	
 
+function ChangeSchedule(train,schedule)
+	train.schedule = schedule
+end
+
 function ON_300TH_TICK()
 	if Count(global.FinishTrain) > 0 then
 		for i,train in pairs(global.FinishTrain) do
@@ -279,6 +283,7 @@ function ON_300TH_TICK()
 				global.FinishTrain[i] = nil
 			else
 				if not (train.station and train.station.backer_name == global.TrainStopName) then 
+					local changedSchedule = false
 					local schedule = train.schedule
 					if (schedule) then
 						for j,record in pairs(schedule.records) do
@@ -292,9 +297,13 @@ function ON_300TH_TICK()
 								break
 							end
 						end
-						train.schedule = schedule
+												
+						changedSchedule = pcall(ChangeSchedule,train,schedule)												
 					end
-					global.FinishTrain[i] = nil
+					
+					if changedSchedule then
+						global.FinishTrain[i] = nil
+					end
 				end
 			end
 		end
