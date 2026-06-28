@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.17.7
+Date: 2019-08-12
+  Bugfixes:
+    - Fixed an error with temporary stop. https://mods.factorio.com/mod/FuelTrainStop/discussion/5d4b8059800cec000b65b4c4
+  Changes:
+    - New setting added.
+---------------------------------------------------------------------------------------------------
 Version: 0.17.6
 Date: 2019-08-05
   Bugfixes:

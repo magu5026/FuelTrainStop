@@ -231,17 +231,20 @@ function LowFuel(locomotive)
 end
 
 function AddSchedule(train)
-	local schedule = train.schedule or {}
-	if not train.schedule then
-		schedule.records = {}
-	end
+	local schedule = train.schedule or {records = {}, current = 1}
+	
 	for _,record in pairs(schedule.records) do
 		if record.station == global.TrainStopName then return end
 	end
-	local record = {station = global.TrainStopName, wait_conditions = {}}
-	record.wait_conditions[#record.wait_conditions+1] = {type = "inactivity", compare_type = "and", ticks = 120 }
-	local current = schedule.current or 0
-	table.insert(schedule.records,current+1,record)
+	
+	local record = {station = global.TrainStopName, wait_conditions = {{type = "inactivity", compare_type = "and", ticks = 120 }}}
+
+	if settings.global['fuel-station-insert-order'].value == "go-after" then
+		table.insert(schedule.records,schedule.current + 1,record)
+	else
+		table.insert(schedule.records,schedule.current,record)
+	end
+	
 	train.schedule = schedule
 end
 
