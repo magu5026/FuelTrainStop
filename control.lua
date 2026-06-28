@@ -121,7 +121,7 @@ function CheckTrainList()
 end
 
 function ON_BUILT_ENTITY(event)
-	local entity = event.created_entity
+	local entity = event.created_entity or event.entity
 	if entity and entity.valid then
 		if entity.name == "fuel-train-stop" then
 			table.insert(global.TrainStop,entity)
@@ -137,7 +137,7 @@ function ON_REMOVE_ENTITY(event)
 		if entity.name == "fuel-train-stop" then
 			for i,stop in pairs(global.TrainStop) do
 				if stop == entity then
-					table.remove(global.TrainStop,index)
+					table.remove(global.TrainStop,i)
 					break
 				end
 			end
@@ -149,8 +149,12 @@ script.on_event({defines.events.on_pre_player_mined_item,defines.events.on_robot
 function ON_ENTITY_RENAMED(event)
 	if not event.by_script and event.entity.name == "fuel-train-stop" then
 		global.TrainStopName = event.entity.backer_name
-		for _,stop in pairs(global.TrainStop) do
-			stop.backer_name = global.TrainStopName
+		for i,stop in pairs(global.TrainStop) do
+			if stop and stop.valid then
+				stop.backer_name = global.TrainStopName
+			else
+				table.remove(global.TrainStop,i)
+			end
 		end
 	end
 end

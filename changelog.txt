@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.17.4
+Date: 2019-07-27
+  Bugfixes:
+    - Fixed an error when pasting settings into a fuel stop. https://mods.factorio.com/mod/FuelTrainStop/discussion/5d3b912a11e5ec000c008a40
+---------------------------------------------------------------------------------------------------
 Version: 0.17.3
 Date: 2019-03-30
   Bugfixes:
