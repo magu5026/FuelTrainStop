@@ -60,7 +60,7 @@ function ON_CONFIGURATION_CHANGED(data)
 	local mod_name = "FuelTrainStop"
 	if NeedMigration(data,mod_name) then
 		local old_version = GetOldVersion(data,mod_name)
-		if old_version < "00.17.02" then
+		if old_version < "00.17.0" then
 			ON_INIT()
 	
 			for _,surface in pairs(game.surfaces) do
