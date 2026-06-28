@@ -60,7 +60,7 @@ function ON_CONFIGURATION_CHANGED(data)
 	local mod_name = "FuelTrainStop"
 	if NeedMigration(data,mod_name) then
 		local old_version = GetOldVersion(data,mod_name)
-		if old_version < "00.17.0" then
+		if old_version < "00.17.06" then
 			ON_INIT()
 	
 			for _,surface in pairs(game.surfaces) do
@@ -277,14 +277,14 @@ function ON_300TH_TICK()
 			else
 				if not (train.station and train.station.backer_name == global.TrainStopName) then 
 					local schedule = train.schedule
-					if(schedule) then
-						for i,record in pairs(schedule.records) do
+					if (schedule) then
+						for j,record in pairs(schedule.records) do
 							if record.station == global.TrainStopName then
-								table.remove(schedule.records,i)
-								if i > Count(schedule.records) then
+								table.remove(schedule.records,j)
+								if j > Count(schedule.records) then
 									schedule.current = 1
 								else
-									schedule.current = i
+									schedule.current = j
 								end					
 								break
 							end
